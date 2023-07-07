@@ -1,0 +1,29 @@
+body{
+    background: url(../img/404Background.png);
+}
+
+.missing{
+    position:absolute;
+    top: 50%;
+    margin-top: -300px;
+    left: 50%;
+    margin-left: -100px;
+    background-color:ghostwhite;
+    width: 250px;
+    height: 150px;
+    border-radius: 24px;
+    text-align: center;
+    padding: 5px 40px;
+    box-sizing: border-box;
+}
+.button{
+    background-color: #A0EEE1;
+    width: 100px;
+    height: 40px;
+    border-radius: 36px;
+    margin-top: 5px;
+    font-size: 20px;
+    font-weight: 600;
+    border: none;
+    color: white;
+}
