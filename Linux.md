@@ -185,9 +185,11 @@ CTRL+C 终止文件执行
 tail -15 text.txt
 tail -f -n 15 text.txt
 查看后15行效果并且追踪
+
 #### vi/vim编辑器
 vi/vim是visual interface的简称，是Linux中最经典的文本编辑器
 vim是vi的加强版本，兼容vi的所有指令，还具有shell程序编辑功能，可以用不同颜色的字体辨别语法正确性，极大地方便了程序设计和编辑性
+
 ##### 命令模式
 按键都被理解为命令，完成不同功能
 ##### 输入模式
@@ -644,7 +646,7 @@ tar -zxvf  text.gz
 ##### CentOS
 ###### Mysql 5.7
 1.配置yum仓库
-># 更新密钥
+> #更新密钥
 >rpm -import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
 >
 >#安装Mysql yum库
@@ -712,7 +714,7 @@ exit
 >安装同样需要root权限
 
 1.配置yum仓库
-># 更新密钥
+> #更新密钥
 >rpm -import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
 >
 >#安装Mysql yum库
@@ -827,6 +829,7 @@ ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '密码';
 wget https://dev.mysql.com/get/mysql-apt-config_0.8.12-1_all.deb
 ```
 2.手动安装仓库
+
 ```shell
 #使用dpkg命令安装仓库
 dpkg -i mysql-apt-config_0.8.12-1_all.deb
@@ -1556,7 +1559,7 @@ Zookeeper是一款分布式的集群化软件，可以在多台服务器上部�
    
    # 2. 创建文件，并填入1
    vim /export/server/zookeeper/data/myid
-   # 在文件内填入1即可
+   # 在文件内填入1即可（标识设备）
    ```
 
 6. 【在node2和node3上操作】，创建文件夹
@@ -1608,7 +1611,7 @@ Zookeeper是一款分布式的集群化软件，可以在多台服务器上部�
     ```shell
     jps
     
-    # 结果中找到有：QuorumPeerMain 进程即可
+    # 结果中找到有：QuorumPeerMain 进程即可(系统自带的openjdk好像没有jps，不能执行)
     ```
 
 12. 【node1上操作】验证Zookeeper
@@ -1626,7 +1629,1173 @@ Zookeeper是一款分布式的集群化软件，可以在多台服务器上部�
 
 至此Zookeeper安装完成
 
+##### 补充
+###### 没有jps
+```yum install -y  java-1.8.0-openjdk-devel```
+安装jps插件
+
+###### CentOS ping不同外网
+1.确保当前虚拟机为nat模式
+2.设置静态ip
+3.编辑DNS
+```shell
+vim /etc/resolv.conf
+
+nameserver 114.114.114.114
+```
+4.重启网络服务
+###### zookeeper启动失败
+1.确定失败原因
+```./zkServer.sh start-foreground```
+Caused by: java.lang.IllegalArgumentException: myid file is missing
+        at org.apache.zookeeper.server.quorum.QuorumPeerConfig.checkValidity(QuorumPeerConfig.java:738)
+        at org.apache.zookeeper.server.quorum.QuorumPeerConfig.setupQuorumPeerConfig(QuorumPeerConfig.java:609)
+        at org.apache.zookeeper.server.quorum.QuorumPeerConfig.parseProperties(QuorumPeerConfig.java:423)
+        at org.apache.zookeeper.server.quorum.QuorumPeerConfig.parse(QuorumPeerConfig.java:153)
+        ... 2 more
+2.myid要放在data下
+
+#### Kafka集群安装部署
+
+##### 简介
+
+Kafka是一款`分布式的、去中心化的、高吞吐低延迟、订阅模式`的消息队列系统。
+
+
+
+同RabbitMQ一样，Kafka也是消息队列。不过RabbitMQ多用于后端系统，因其更加专注于消息的延迟和容错。
+
+Kafka多用于大数据体系，因其更加专注于数据的吞吐能力。
+
+Kafka多数都是运行在分布式（集群化）模式下，所以课程将以3台服务器，来完成Kafka集群的安装部署。
+
+
+
+##### 安装
+
+
+
+1. 确保已经跟随前面的视频，安装并部署了JDK和Zookeeper服务
+
+   > Kafka的运行依赖JDK环境和Zookeeper请确保已经有了JDK环境和Zookeeper
+
+2. 【在node1操作】下载并上传Kafka的安装包
+
+   ```shell
+   # 下载安装包
+   wget http://archive.apache.org/dist/kafka/2.4.1/kafka_2.12-2.4.1.tgz
+   ```
+
+3. 【在node1操作】解压
+
+   ```shell
+   mkdir -p /export/server			# 此文件夹如果不存在需先创建
+   
+   # 解压
+   tar -zxvf kafka_2.12-2.4.1.tgz -C /export/server/
+   
+   # 创建软链接
+   ln -s /export/server/kafka_2.12-2.4.1 /export/server/kafka
+   ```
+
+4. 【在node1操作】修改Kafka目录内的config目录内的`server.properties`文件
+
+   ````shell
+   cd /export/server/kafka/config
+   # 指定broker的id
+   broker.id=1
+   # 指定 kafka的绑定监听的地址
+   listeners=PLAINTEXT://node1:9092
+   # 指定Kafka数据的位置
+   log.dirs=/export/server/kafka/data
+   # 指定Zookeeper的三个节点
+   zookeeper.connect=node1:2181,node2:2181,node3:2181
+   ````
+
+5. 【在node1操作】将node1的kafka复制到node2和node3
+
+   ```shell
+   cd /export/server
+   
+   # 复制到node2同名文件夹
+   scp -r kafka_2.12-2.4.1 node2:`pwd`/
+   # 复制到node3同名文件夹
+   scp -r kafka_2.12-2.4.1 node3:$PWD
+   ```
+
+6. 【在node2操作】
+
+   ```shell
+   # 创建软链接
+   ln -s /export/server/kafka_2.12-2.4.1 /export/server/kafka
+   
+   cd /export/server/kafka/config
+   # 指定broker的id
+   broker.id=2
+   # 指定 kafka的绑定监听的地址
+   listeners=PLAINTEXT://node2:9092
+   # 指定Kafka数据的位置
+   log.dirs=/export/server/kafka/data
+   # 指定Zookeeper的三个节点
+   zookeeper.connect=node1:2181,node2:2181,node3:2181
+   ```
+
+7. 【在node3操作】
+
+   ```shell
+   # 创建软链接
+   ln -s /export/server/kafka_2.12-2.4.1 /export/server/kafka
+   
+   cd /export/server/kafka/config
+   # 指定broker的id
+   broker.id=3
+   # 指定 kafka的绑定监听的地址
+   listeners=PLAINTEXT://node3:9092
+   # 指定Kafka数据的位置
+   log.dirs=/export/server/kafka/data
+   # 指定Zookeeper的三个节点
+   zookeeper.connect=node1:2181,node2:2181,node3:2181
+   ```
+
+8. 启动kafka
+
+   ```shell
+   # 请先确保Zookeeper已经启动了
+   
+   # 方式1：【前台启动】分别在node1、2、3上执行如下语句（关闭finalshell窗口软件就没有了
+   /export/server/kafka/bin/kafka-server-start.sh /export/server/kafka/config/server.properties
+   
+   # 方式2：【后台启动】分别在node1、2、3上执行如下语句
+   nohup /export/server/kafka/bin/kafka-server-start.sh /export/server/kafka/config/server.properties 2>&1 >> /export/server/kafka/kafka-server.log &
+   ```
+
+9. 验证Kafka启动
+
+   ```shell
+   # 在每一台服务器执行
+   jps
+   ```
+
+   ![image-20221025174522487](https://image-set.oss-cn-zhangjiakou.aliyuncs.com/img-out/2022/10/25/20221025174522.png)
 
 
 
 
+
+##### 测试Kafka能否正常使用
+
+1. 创建测试主题
+
+```shell
+# 在node1执行，创建一个主题
+/export/server/kafka_2.12-2.4.1/bin/kafka-topics.sh --create --zookeeper node1:2181 --replication-factor 1 --partitions 3 --topic test
+```
+
+2. 运行测试，请在FinalShell中打开2个node1的终端页面
+
+```shell
+# 打开一个终端页面，启动一个模拟的数据生产者
+/export/server/kafka_2.12-2.4.1/bin/kafka-console-producer.sh --broker-list node1:9092 --topic test
+# 再打开一个新的终端页面，在启动一个模拟的数据消费者
+/export/server/kafka_2.12-2.4.1/bin/kafka-console-consumer.sh --bootstrap-server node1:9092 --topic test --from-beginning
+```
+
+#### 大数据集群（Hadoop生态）安装部署
+
+##### 简介
+
+1）Hadoop是一个由Apache基金会所开发的分布式系统基础架构。
+2）主要解决，海量数据的存储和海量数据的分析计算问题。
+
+Hadoop HDFS 提供分布式海量数据存储能力
+
+Hadoop YARN 提供分布式集群资源管理能力
+
+Hadoop MapReduce 提供分布式海量数据计算能力
+
+
+
+
+
+##### 前置要求
+
+- 请确保完成了集群化环境前置准备章节的内容
+- 即：JDK、SSH免密、关闭防火墙、配置主机名映射等前置操作
+
+
+
+##### Hadoop集群角色
+
+Hadoop生态体系中总共会出现如下进程角色：
+
+1. Hadoop HDFS的管理角色：Namenode进程（`仅需1个即可（管理者一个就够）`）
+2. Hadoop HDFS的工作角色：Datanode进程（`需要多个（工人，越多越好，一个机器启动一个）`）
+3. Hadoop YARN的管理角色：ResourceManager进程（`仅需1个即可（管理者一个就够）`）
+4. Hadoop YARN的工作角色：NodeManager进程（`需要多个（工人，越多越好，一个机器启动一个）`）
+5. Hadoop 历史记录服务器角色：HistoryServer进程（`仅需1个即可（功能进程无需太多1个足够）`）
+6. Hadoop 代理服务器角色：WebProxyServer进程（`仅需1个即可（功能进程无需太多1个足够）`）
+7. Zookeeper的进程：QuorumPeerMain进程（`仅需1个即可（Zookeeper的工作者，越多越好）`）
+
+
+
+
+
+##### 角色和节点分配
+
+
+
+角色分配如下：
+
+1. node1:Namenode、Datanode、ResourceManager、NodeManager、HistoryServer、WebProxyServer、QuorumPeerMain
+2. node2:Datanode、NodeManager、QuorumPeerMain
+3. node3:Datanode、NodeManager、QuorumPeerMain
+
+![image-20221026202935745](https://image-set.oss-cn-zhangjiakou.aliyuncs.com/img-out/2022/10/26/20221026202935.png)
+
+
+
+##### 安装
+
+###### 调整虚拟机内存
+
+如上图，可以看出node1承载了太多的压力。同时node2和node3也同时运行了不少程序
+
+为了确保集群的稳定，需要对虚拟机进行内存设置。
+
+
+
+请在VMware中，对：
+
+1. node1设置4GB或以上内存
+2. node2和node3设置2GB或以上内存
+
+
+
+> 大数据的软件本身就是集群化（一堆服务器）一起运行的。
+>
+> 现在我们在一台电脑中以多台虚拟机来模拟集群，确实会有很大的内存压力哦。
+
+
+
+###### Zookeeper集群部署
+
+略
+
+
+
+###### Hadoop集群部署
+
+1. 下载Hadoop安装包、解压、配置软链接
+
+   ```shell
+   # 1. 下载
+   wget http://archive.apache.org/dist/hadoop/common/hadoop-3.3.0/hadoop-3.3.0.tar.gz
+   
+   # 2. 解压
+   # 请确保目录/export/server存在
+   tar -zxvf hadoop-3.3.0.tar.gz -C /export/server/
+   
+   # 3. 构建软链接
+   ln -s /export/server/hadoop-3.3.0 /export/server/hadoop
+   ```
+
+2. 修改配置文件：`hadoop-env.sh`
+
+   > Hadoop的配置文件要修改的地方很多，请细心
+
+   cd 进入到/export/server/hadoop/etc/hadoop，文件夹中，配置文件都在这里
+
+   修改hadoop-env.sh文件
+
+   > 此文件是配置一些Hadoop用到的环境变量
+   >
+   > 这些是临时变量，在Hadoop运行时有用
+   >
+   > 如果要永久生效，需要写到/etc/profile中
+
+   ```shell
+   # 在文件开头加入：
+   # 配置Java安装路径
+   export JAVA_HOME=/export/server/jdk
+   # 配置Hadoop安装路径
+   export HADOOP_HOME=/export/server/hadoop
+   # Hadoop hdfs配置文件路径
+   export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+   # Hadoop YARN配置文件路径
+   export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
+   # Hadoop YARN 日志文件夹
+   export YARN_LOG_DIR=$HADOOP_HOME/logs/yarn
+   # Hadoop hdfs 日志文件夹
+   export HADOOP_LOG_DIR=$HADOOP_HOME/logs/hdfs
+   
+   # Hadoop的使用启动用户配置
+   export HDFS_NAMENODE_USER=root
+   export HDFS_DATANODE_USER=root
+   export HDFS_SECONDARYNAMENODE_USER=root
+   export YARN_RESOURCEMANAGER_USER=root
+   export YARN_NODEMANAGER_USER=root
+   export YARN_PROXYSERVER_USER=root
+   ```
+
+3. 修改配置文件：`core-site.xml`
+
+   如下，清空文件，填入如下内容
+
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+   <!--
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. See accompanying LICENSE file.
+   -->
+   
+   <!-- Put site-specific property overrides in this file. -->
+   <configuration>
+     <property>
+       <name>fs.defaultFS</name>
+       <value>hdfs://node1:8020</value>
+       <description></description>
+     </property>
+   
+     <property>
+       <name>io.file.buffer.size</name>
+       <value>131072</value>
+       <description></description>
+     </property>
+   </configuration>
+   ```
+
+4. 配置：`hdfs-site.xml`文件
+
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+   <!--
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. See accompanying LICENSE file.
+   -->
+   
+   <!-- Put site-specific property overrides in this file. -->
+   
+   <configuration>
+       <property>
+           <name>dfs.datanode.data.dir.perm</name>
+           <value>700</value>
+       </property>
+   
+     <property>
+       <name>dfs.namenode.name.dir</name>
+       <value>/data/nn</value>
+       <description>Path on the local filesystem where the NameNode stores the namespace and transactions logs persistently.</description>
+     </property>
+   
+     <property>
+       <name>dfs.namenode.hosts</name>
+       <value>node1,node2,node3</value>
+       <description>List of permitted DataNodes.</description>
+     </property>
+   
+     <property>
+       <name>dfs.blocksize</name>
+       <value>268435456</value>
+       <description></description>
+     </property>
+   
+   
+     <property>
+       <name>dfs.namenode.handler.count</name>
+       <value>100</value>
+       <description></description>
+     </property>
+   
+     <property>
+       <name>dfs.datanode.data.dir</name>
+       <value>/data/dn</value>
+     </property>
+   </configuration>
+   ```
+
+5. 配置：`mapred-env.sh`文件
+
+   ```shell
+   # 在文件的开头加入如下环境变量设置
+   export JAVA_HOME=/export/server/jdk
+   export HADOOP_JOB_HISTORYSERVER_HEAPSIZE=1000
+   export HADOOP_MAPRED_ROOT_LOGGER=INFO,RFA
+   ```
+
+6. 配置：`mapred-site.xml`文件
+
+   ```xml
+   <?xml version="1.0"?>
+   <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+   <!--
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. See accompanying LICENSE file.
+   -->
+   
+   <!-- Put site-specific property overrides in this file. -->
+   
+   <configuration>
+     <property><?xml version="1.0"?>
+   <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+   <!--
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. See accompanying LICENSE file.
+   -->
+   
+   <!-- Put site-specific property overrides in this file. -->
+   
+   <configuration>
+     <property>
+       <name>mapreduce.framework.name</name>
+       <value>yarn</value>
+       <description></description>
+     </property>
+   
+     <property>
+       <name>mapreduce.jobhistory.address</name>
+       <value>node1:10020</value>
+       <description></description>
+     </property>
+   
+   
+     <property>
+       <name>mapreduce.jobhistory.webapp.address</name>
+       <value>node1:19888</value>
+       <description></description>
+     </property>
+   
+   
+     <property>
+       <name>mapreduce.jobhistory.intermediate-done-dir</name>
+       <value>/data/mr-history/tmp</value>
+       <description></description>
+     </property>
+   
+   
+     <property>
+       <name>mapreduce.jobhistory.done-dir</name>
+       <value>/data/mr-history/done</value>
+       <description></description>
+     </property>
+   <property>
+     <name>yarn.app.mapreduce.am.env</name>
+     <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+   </property>
+   <property>
+     <name>mapreduce.map.env</name>
+     <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+   </property>
+   <property>
+     <name>mapreduce.reduce.env</name>
+     <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+   </property>
+   </configuration>
+       <name>mapreduce.framework.name</name>
+       <value>yarn</value>
+       <description></description>
+     </property>
+   
+     <property>
+       <name>mapreduce.jobhistory.address</name>
+       <value>node1:10020</value>
+       <description></description>
+     </property>
+   
+   
+     <property>
+       <name>mapreduce.jobhistory.webapp.address</name>
+       <value>node1:19888</value>
+       <description></description>
+     </property>
+   
+   
+     <property>
+       <name>mapreduce.jobhistory.intermediate-done-dir</name>
+       <value>/data/mr-history/tmp</value>
+       <description></description>
+     </property>
+   
+   
+     <property>
+       <name>mapreduce.jobhistory.done-dir</name>
+       <value>/data/mr-history/done</value>
+       <description></description>
+     </property>
+   <property>
+     <name>yarn.app.mapreduce.am.env</name>
+     <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+   </property>
+   <property>
+     <name>mapreduce.map.env</name>
+     <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+   </property>
+   <property>
+     <name>mapreduce.reduce.env</name>
+     <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+   </property>
+   </configuration>
+   ```
+
+7. 配置：`yarn-env.sh`文件
+
+   ```shell
+   # 在文件的开头加入如下环境变量设置
+   export JAVA_HOME=/export/server/jdk
+   export HADOOP_HOME=/export/server/hadoop
+   export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+   export YARN_CONF_DIR=$HADOOP_HOME/etc/hadoop
+   export YARN_LOG_DIR=$HADOOP_HOME/logs/yarn
+   export HADOOP_LOG_DIR=$HADOOP_HOME/logs/hdfs
+   ```
+
+8. 配置：`yarn-site.xml`文件
+
+   ```xml
+   <?xml version="1.0"?>
+   <!--
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+   
+       http://www.apache.org/licenses/LICENSE-2.0
+   
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License. See accompanying LICENSE file.
+   -->
+   <configuration>
+   
+   <!-- Site specific YARN configuration properties -->
+   <property>
+       <name>yarn.log.server.url</name>
+       <value>http://node1:19888/jobhistory/logs</value>
+       <description></description>
+   </property>
+   
+     <property>
+       <name>yarn.web-proxy.address</name>
+       <value>node1:8089</value>
+       <description>proxy server hostname and port</description>
+     </property>
+   
+   
+     <property>
+       <name>yarn.log-aggregation-enable</name>
+       <value>true</value>
+       <description>Configuration to enable or disable log aggregation</description>
+     </property>
+   
+     <property>
+       <name>yarn.nodemanager.remote-app-log-dir</name>
+       <value>/tmp/logs</value>
+       <description>Configuration to enable or disable log aggregation</description>
+     </property>
+   
+   
+   <!-- Site specific YARN configuration properties -->
+     <property>
+       <name>yarn.resourcemanager.hostname</name>
+       <value>node1</value>
+       <description></description>
+     </property>
+   
+     <property>
+       <name>yarn.resourcemanager.scheduler.class</name>
+       <value>org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler</value>
+       <description></description>
+     </property>
+   
+     <property>
+       <name>yarn.nodemanager.local-dirs</name>
+       <value>/data/nm-local</value>
+       <description>Comma-separated list of paths on the local filesystem where intermediate data is written.</description>
+     </property>
+   
+   
+     <property>
+       <name>yarn.nodemanager.log-dirs</name>
+       <value>/data/nm-log</value>
+       <description>Comma-separated list of paths on the local filesystem where logs are written.</description>
+     </property>
+   
+   
+     <property>
+       <name>yarn.nodemanager.log.retain-seconds</name>
+       <value>10800</value>
+       <description>Default time (in seconds) to retain log files on the NodeManager Only applicable if log-aggregation is disabled.</description>
+     </property>
+   
+   
+   
+     <property>
+       <name>yarn.nodemanager.aux-services</name>
+       <value>mapreduce_shuffle</value>
+       <description>Shuffle service that needs to be set for Map Reduce applications.</description>
+     </property>
+   </configuration>
+   ```
+
+9. 修改workers文件
+
+   ```shell
+   # 全部内容如下
+   node1
+   node2
+   node3
+   ```
+
+10. 分发hadoop到其它机器
+
+   ```shell
+# 在node1执行
+cd /export/server
+
+scp -r hadoop-3.3.0 node2:`pwd`/
+scp -r hadoop-3.3.0 node3:`pwd`/
+   ```
+
+11. 在node2、node3执行
+
+    ```shell
+    # 创建软链接
+    ln -s /export/server/hadoop-3.3.0 /export/server/hadoop
+    ```
+
+12. 创建所需目录
+
+    - 在node1执行：
+
+      ```shell
+      mkdir -p /data/nn
+      mkdir -p /data/dn
+      mkdir -p /data/nm-log
+      mkdir -p /data/nm-local
+      ```
+
+    - 在node2执行：
+
+      ```shell
+      mkdir -p /data/dn
+      mkdir -p /data/nm-log
+      mkdir -p /data/nm-local
+      ```
+
+    - 在node3执行：
+
+      ```shell
+      mkdir -p /data/dn
+      mkdir -p /data/nm-log
+      mkdir -p /data/nm-local
+      ```
+
+13. 配置环境变量
+
+    在node1、node2、node3修改/etc/profile
+
+    ```shell
+    export HADOOP_HOME=/export/server/hadoop
+    export PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+    ```
+
+    执行`source /etc/profile`生效
+
+14. 格式化NameNode，在node1执行
+
+    ```shell
+    hadoop namenode -format
+    ```
+
+    > hadoop这个命令来自于：$HADOOP_HOME/bin中的程序
+    >
+    > 由于配置了环境变量PATH，所以可以在任意位置执行hadoop命令哦
+
+15. 启动hadoop的hdfs集群，在node1执行即可
+
+    ```shell
+    start-dfs.sh
+    
+    # 如需停止可以执行
+    stop-dfs.sh
+    ```
+
+    > start-dfs.sh这个命令来自于：$HADOOP_HOME/sbin中的程序
+    >
+    > 由于配置了环境变量PATH，所以可以在任意位置执行start-dfs.sh命令哦
+
+16. 启动hadoop的yarn集群，在node1执行即可
+
+    ```shell
+    start-yarn.sh
+    
+    # 如需停止可以执行
+    stop-yarn.sh
+    ```
+
+17. 启动历史服务器
+
+    ```shell
+    mapred --daemon start historyserver
+    
+    # 如需停止将start更换为stop
+    ```
+
+18. 启动web代理服务器
+
+    ```shell
+    yarn-daemon.sh start proxyserver
+    
+    # 如需停止将start更换为stop
+    ```
+
+
+
+##### 验证Hadoop集群运行情况
+
+1. 在node1、node2、node3上通过jps验证进程是否都启动成功
+
+2. 验证HDFS，浏览器打开：http://node1:9870
+
+   创建文件test.txt，随意填入内容，并执行：
+
+   ```shell
+   hadoop fs -put test.txt /test.txt
+   
+   hadoop fs -cat /test.txt
+   ```
+
+3. 验证YARN，浏览器打开：http://node1:8088
+
+   执行：
+
+   ```shell
+   # 创建文件words.txt，填入如下内容
+   itheima itcast hadoop
+   itheima hadoop hadoop
+   itheima itcast
+   
+   # 将文件上传到HDFS中
+   hadoop fs -put words.txt /words.txt
+   
+   # 执行如下命令验证YARN是否正常
+   hadoop jar /export/server/hadoop/share/hadoop/mapreduce/hadoop-mapreduce-examples-3.3.0.jar wordcount -Dmapred.job.queue.name=root.root /words.txt /output
+   ```
+
+#### 大数据NoSQL数据库HBase集群部署
+
+##### 简介
+
+HBase 是一种[分布式](https://so.csdn.net/so/search?q=分布式&spm=1001.2101.3001.7020)、可扩展、支持海量数据存储的 NoSQL 数据库。
+
+
+
+和Redis一样，HBase是一款KeyValue型存储的数据库。
+
+不过和Redis设计方向不同
+
+- Redis设计为少量数据，超快检索
+- HBase设计为海量数据，快速检索
+
+HBase在大数据领域应用十分广泛，现在我们来在node1、node2、node3上部署HBase集群。
+
+
+
+##### 安装
+
+
+
+1. HBase依赖Zookeeper、JDK、Hadoop（HDFS），请确保已经完成前面
+
+   - 集群化软件前置准备（JDK）
+   - Zookeeper
+   - Hadoop
+   - 这些环节的软件安装
+
+2. 【node1执行】下载HBase安装包
+
+   ```shell
+   # 下载
+   wget http://archive.apache.org/dist/hbase/2.1.0/hbase-2.1.0-bin.tar.gz
+   
+   # 解压
+   tar -zxvf hbase-2.1.0-bin.tar.gz -C /export/server
+   
+   # 配置软链接
+   ln -s /export/server/hbase-2.1.0 /export/server/hbase
+   ```
+
+3. 【node1执行】，修改配置文件，修改`conf/hbase-env.sh`文件
+
+   ```shell
+   # 在28行配置JAVA_HOME
+   export JAVA_HOME=/export/server/jdk
+   # 在126行配置：
+   # 意思表示，不使用HBase自带的Zookeeper，而是用独立Zookeeper
+   export HBASE_MANAGES_ZK=false
+   # 在任意行，比如26行，添加如下内容：
+   export HBASE_DISABLE_HADOOP_CLASSPATH_LOOKUP="true"
+   ```
+
+4. 【node1执行】，修改配置文件，修改`conf/hbase-site.xml`文件
+
+   ```shell
+   # 将文件的全部内容替换成如下内容：
+   <configuration>
+           <!-- HBase数据在HDFS中的存放的路径 -->
+           <property>
+               <name>hbase.rootdir</name>
+               <value>hdfs://node1:8020/hbase</value>
+           </property>
+           <!-- Hbase的运行模式。false是单机模式，true是分布式模式。若为false,Hbase和Zookeeper会运行在同一个JVM里面 -->
+           <property>
+               <name>hbase.cluster.distributed</name>
+               <value>true</value>
+           </property>
+           <!-- ZooKeeper的地址 -->
+           <property>
+               <name>hbase.zookeeper.quorum</name>
+               <value>node1,node2,node3</value>
+           </property>
+           <!-- ZooKeeper快照的存储位置 -->
+           <property>
+               <name>hbase.zookeeper.property.dataDir</name>
+               <value>/export/server/apache-zookeeper-3.6.0-bin/data</value>
+           </property>
+           <!--  V2.1版本，在分布式情况下, 设置为false -->
+           <property>
+               <name>hbase.unsafe.stream.capability.enforce</name>
+               <value>false</value>
+           </property>
+   </configuration>
+   ```
+
+5. 【node1执行】，修改配置文件，修改`conf/regionservers`文件
+
+   ```shell
+   # 填入如下内容
+   node1
+   node2
+   node3
+   ```
+
+6. 【node1执行】，分发hbase到其它机器
+
+   ```shell
+   scp -r /export/server/hbase-2.1.0 node2:/export/server/
+   scp -r /export/server/hbase-2.1.0 node3:/export/server/
+   ```
+
+7. 【node2、node3执行】，配置软链接
+
+   ```shell
+   ln -s /export/server/hbase-2.1.0 /export/server/hbase
+   ```
+
+8. 【node1、node2、node3执行】，配置环境变量
+
+   ```shell
+   # 配置在/etc/profile内，追加如下两行
+   export HBASE_HOME=/export/server/hbase
+   export PATH=$HBASE_HOME/bin:$PATH
+   
+   source /etc/profile
+   ```
+
+9. 【node1执行】启动HBase
+
+   > 请确保：Hadoop HDFS、Zookeeper是已经启动了的
+
+   ```shell
+   start-hbase.sh
+   
+   # 如需停止可使用
+   stop-hbase.sh
+   ```
+
+   > 由于我们配置了环境变量export PATH=$PATH:$HBASE_HOME/bin
+   >
+   > start-hbase.sh即在$HBASE_HOME/bin内，所以可以无论当前目录在哪，均可直接执行
+
+10. 验证HBase
+
+    浏览器打开：http://node1:16010，即可看到HBase的WEB UI页面
+
+11. 简单测试使用HBase
+
+    【node1执行】
+
+    ```shell
+    hbase shell
+    
+    # 创建表
+    create 'test', 'cf'
+    
+    # 插入数据
+    put 'test', 'rk001', 'cf:info', 'itheima'
+    
+    # 查询数据
+    get 'test', 'rk001'
+    
+    # 扫描表数据
+    scan 'test'
+    ```
+
+#### 分布式内存计算Spark环境部署
+
+##### 注意
+
+本小节的操作，基于：`大数据集群（Hadoop生态）安装部署`环节中所构建的Hadoop集群
+
+如果没有Hadoop集群，请参阅前置内容，部署好环境。
+
+
+
+##### 简介
+
+Spark是一款分布式内存计算引擎，可以支撑海量数据的分布式计算。
+
+
+
+Spark在大数据体系是明星产品，作为最新一代的综合计算引擎，支持离线计算和实时计算。
+
+在大数据领域广泛应用，是目前世界上使用最多的大数据分布式计算引擎。
+
+
+
+我们将基于前面构建的Hadoop集群，部署Spark Standalone集群。
+
+
+
+##### 安装
+
+
+
+1. 【node1执行】下载并解压
+
+   ```shell
+   wget https://archive.apache.org/dist/spark/spark-2.4.5/spark-2.4.5-bin-hadoop2.7.tgz
+   
+   # 解压
+   tar -zxvf spark-2.4.5-bin-hadoop2.7.tgz -C /export/server/
+   
+   # 软链接
+   ln -s /export/server/spark-2.4.5-bin-hadoop2.7 /export/server/spark
+   ```
+
+2. 【node1执行】修改配置文件名称
+
+   ```shell
+   # 改名
+   cd /export/server/spark/conf
+   mv spark-env.sh.template spark-env.sh
+   mv slaves.template slaves
+   ```
+
+3. 【node1执行】修改配置文件，`spark-env.sh`
+
+   ```shell
+   ## 设置JAVA安装目录
+   JAVA_HOME=/export/server/jdk
+   
+   ## HADOOP软件配置文件目录，读取HDFS上文件和运行YARN集群
+   HADOOP_CONF_DIR=/export/server/hadoop/etc/hadoop
+   YARN_CONF_DIR=/export/server/hadoop/etc/hadoop
+   
+   ## 指定spark老大Master的IP和提交任务的通信端口
+   export SPARK_MASTER_HOST=node1
+   export SPARK_MASTER_PORT=7077
+   
+   SPARK_MASTER_WEBUI_PORT=8080
+   SPARK_WORKER_CORES=1
+   SPARK_WORKER_MEMORY=1g
+   ```
+
+4. 【node1执行】修改配置文件，`slaves`
+
+   ```shell
+   node1
+   node2
+   node3
+   ```
+
+5. 【node1执行】分发
+
+   ```shell
+   scp -r spark-2.4.5-bin-hadoop2.7 node2:$PWD
+   scp -r spark-2.4.5-bin-hadoop2.7 node3:$PWD
+   ```
+
+6. 【node2、node3执行】设置软链接
+
+   ```shell
+   ln -s /export/server/spark-2.4.5-bin-hadoop2.7 /export/server/spark
+   ```
+
+7. 【node1执行】启动Spark集群
+
+   ```shell
+   /export/server/spark/sbin/start-all.sh
+   
+   # 如需停止，可以
+   /export/server/spark/sbin/stop-all.sh
+   ```
+
+8. 打开Spark监控页面，浏览器打开：http://node1:8081
+
+9. 【node1执行】提交测试任务(算圆周率)
+
+   ```shell
+   /export/server/spark/bin/spark-submit --master spark://node1:7077 --class org.apache.spark.examples.SparkPi /export/server/spark/examples/jars/spark-examples_2.11-2.4.5.jar
+   ```
+
+#### 分布式内存计算Flink环境部署
+
+##### 注意
+
+本小节的操作，基于：`大数据集群（Hadoop生态）安装部署`环节中所构建的Hadoop集群
+
+如果没有Hadoop集群，请参阅前置内容，部署好环境。
+
+
+
+##### 简介
+
+Flink同Spark一样，是一款分布式内存计算引擎，可以支撑海量数据的分布式计算。
+
+
+
+Flink在大数据体系同样是明星产品，作为最新一代的综合计算引擎，支持离线计算和实时计算。
+
+在大数据领域广泛应用，是目前世界上除去Spark以外，应用最为广泛的分布式计算引擎。
+
+
+
+我们将基于前面构建的Hadoop集群，部署Flink Standalone集群
+
+Spark更加偏向于离线计算而Flink更加偏向于实时计算。
+
+
+
+##### 安装
+
+
+
+1. 【node1操作】下载安装包
+
+   ```shell
+   wget https://archive.apache.org/dist/flink/flink-1.10.0/flink-1.10.0-bin-scala_2.11.tgz
+   
+   # 解压
+   tar -zxvf flink-1.10.0-bin-scala_2.11.tgz -C /export/server/
+   
+   # 软链接
+   ln -s /export/server/flink-1.10.0 /export/server/flink
+   ```
+
+2. 【node1操作】修改配置文件，`conf/flink-conf.yaml`
+
+   ```yaml
+   # jobManager 的IP地址
+   jobmanager.rpc.address: node1
+   # JobManager 的端口号
+   jobmanager.rpc.port: 6123
+   # JobManager JVM heap 内存大小
+   jobmanager.heap.size: 1024m
+   # TaskManager JVM heap 内存大小
+   taskmanager.heap.size: 1024m
+   # 每个 TaskManager 提供的任务 slots 数量大小
+   taskmanager.numberOfTaskSlots: 2
+   #是否进行预分配内存，默认不进行预分配，这样在我们不使用flink集群时候不会占用集群资源
+   taskmanager.memory.preallocate: false
+   # 程序默认并行计算的个数
+   parallelism.default: 1
+   #JobManager的Web界面的端口（默认：8081）
+   jobmanager.web.port: 8081
+   ```
+
+3. 【node1操作】，修改配置文件，`conf/slaves`
+
+   ```shell
+   node1
+   node2
+   node3
+   ```
+
+4. 【node1操作】分发Flink安装包到其它机器
+
+   ```shell
+   cd /export/server
+   scp -r flink-1.10.0 node2:`pwd`/
+   scp -r flink-1.10.0 node3:`pwd`/
+   ```
+
+5. 【node2、node3操作】
+
+   ```shell
+   # 配置软链接
+   ln -s /export/server/flink-1.10.0 /export/server/flink
+   ```
+
+6. 【node1操作】，启动Flink
+
+   ```shell
+   /export/server/flink/bin/start-cluster.sh
+   ```
+
+7. 验证Flink启动
+
+   ```shell
+   # 浏览器打开
+   http://node1:8081
+   ```
+
+8. 提交测试任务
+
+   【node1执行】
+
+   ```shell
+   /export/server/flink/bin/flink run /export/server/flink-1.10.0/examples/batch/WordCount.jar
+   ```
+
+
+
+![image-20230717093046472](https://s2.loli.net/2023/07/17/OiwDafWnsNV2rCA.png)
