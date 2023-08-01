@@ -1,0 +1,11 @@
+方法一
+import statistics
+print(statistics.median([10,9,89])
+方法二
+from statistics import median,mean
+print(median([10,9,89]))
+方法三
+from statistics import *
+print(median([10,9,89]))
+
+安装第三方模块,pip install 模块名

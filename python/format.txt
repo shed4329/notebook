@@ -1,0 +1,9 @@
+"""无{0}无{1}""".format(参数0,参数1)
+
+"""无{current_year}无{current_name}""".format(current_year=year,current_name=name)
+这种方法顺序没有要求
+
+f-字符串
+f"""无{year}无{name}"""
+
+{gpa:.2f}保留两位小数

@@ -1,0 +1,3 @@
+and,or,not
+not x>5
+not>and>or(优先级，可以加括号改变)
